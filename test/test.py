@@ -7,34 +7,65 @@ from cocotb.triggers import ClockCycles
 
 
 @cocotb.test()
-async def test_project(dut):
-    dut._log.info("Start")
+async def test_trivium_lite(dut):
+    """Basic encryption and decryption test for Trivium-lite cipher"""
 
-    # Set the clock period to 10 us (100 KHz)
-    clock = Clock(dut.clk, 10, units="us")
+    dut._log.info("Starting test")
+
+    # 50 MHz clock = 20 ns period
+    clock = Clock(dut.clk, 20, units="ns")
     cocotb.start_soon(clock.start())
 
     # Reset
-    dut._log.info("Reset")
+    dut.rst_n.value = 0
     dut.ena.value = 1
     dut.ui_in.value = 0
     dut.uio_in.value = 0
-    dut.rst_n.value = 0
-    await ClockCycles(dut.clk, 10)
+    await ClockCycles(dut.clk, 5)
     dut.rst_n.value = 1
+    await ClockCycles(dut.clk, 5)
 
-    dut._log.info("Test project behavior")
-
-    # Set the input values you want to test
-    dut.ui_in.value = 20
-    dut.uio_in.value = 30
-
-    # Wait for one clock cycle to see the output values
+    # === Seed phase ===
+    SEED = 0x3D
+    dut._log.info("Setting seed")
+    dut.uio_in.value = SEED
     await ClockCycles(dut.clk, 1)
+    dut.uio_in.value = 0x00  # clear seed
+    await ClockCycles(dut.clk, 2)
 
-    # The following assersion is just an example of how to check the output values.
-    # Change it to match the actual expected output of your module:
-    assert dut.uo_out.value == 50
+    plaintext = [0xDE, 0xAD, 0xBE, 0xEF]
+    ciphertext = []
 
-    # Keep testing the module by changing the input values, waiting for
-    # one or more clock cycles, and asserting the expected output values.
+    # === Encrypt ===
+    dut._log.info("Encryption phase")
+    for pt in plaintext:
+        dut.ui_in.value = pt
+        await ClockCycles(dut.clk, 8)
+        ct = dut.uo_out.value.integer
+        ciphertext.append(ct)
+        dut._log.info(f"Plain: 0x{pt:02X} => Cipher: 0x{ct:02X}")
+
+    # === Reset ===
+    dut._log.info("Resetting")
+    dut.uio_in.value = 0xFF
+    await ClockCycles(dut.clk, 1)
+    dut.uio_in.value = 0x00
+    await ClockCycles(dut.clk, 2)
+
+    # === Seed again ===
+    dut._log.info("Seeding again for decryption")
+    dut.uio_in.value = SEED
+    await ClockCycles(dut.clk, 1)
+    dut.uio_in.value = 0x00
+    await ClockCycles(dut.clk, 2)
+
+    # === Decrypt ===
+    dut._log.info("Decryption phase")
+    for i, ct in enumerate(ciphertext):
+        dut.ui_in.value = ct
+        await ClockCycles(dut.clk, 8)
+        decrypted = dut.uo_out.value.integer
+        dut._log.info(f"Cipher: 0x{ct:02X} => Decrypted: 0x{decrypted:02X}")
+        assert decrypted == plaintext[i], f"Mismatch at [{i}]"
+
+    dut._log.info("Test passed")
