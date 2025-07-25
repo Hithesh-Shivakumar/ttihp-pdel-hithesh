@@ -64,14 +64,16 @@ module tt_um_trivium_lite (
     end else begin
       case (state)
 
-        IDLE: begin
-          if (uio_in != 8'h00 && uio_in != 8'hFF) begin
-            s1 <= uio_in;
-            s2 <= {~uio_in[3:0], uio_in[7:4]};  // Derived seed variation
-            s3 <= uio_in ^ 8'hA5;
-            state <= RUN;
-          end
-        end
+IDLE: begin
+    step <= 0;
+    temp_keystream <= 8'b0;
+    if (uio_in != 8'h00 && uio_in != 8'hFF) begin
+        s1 <= uio_in;
+        s2 <= {~uio_in[3:0], uio_in[7:4]};
+        s3 <= uio_in ^ 8'hA5;
+        state <= RUN;
+    end
+end
 
         RUN: begin
           if (uio_in == 8'hFF) begin
