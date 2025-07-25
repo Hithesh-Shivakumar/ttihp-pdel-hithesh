@@ -15,7 +15,7 @@ project:
 
   # Source file list
   source_files:
-    - "tt_um_trivium_lite.v"
+    - "project.v"
 
 # Pin mapping: describe your I/O functions
 pinout:
