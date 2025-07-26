@@ -45,7 +45,7 @@ module tt_um_trivium_lite (
     // Output Assignments
     // ====================================
     assign uio_out = 8'b0;  // Bidirectional outputs not used
-    assign uio_oe  = 8'b0;  // Bidirectional enables not used
+    assign uio_oe  = 8'b0;  // Bidirectional inputs used so enable set to 0
     
     // ====================================
     // Main State Machine
