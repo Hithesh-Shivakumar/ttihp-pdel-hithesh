@@ -25,9 +25,9 @@ module tt_um_trivium_lite (
     localparam RESET = 2'd2;
     
     // Default initialization values for Trivium registers
-    localparam INIT_S1 = 16'h1;
-    localparam INIT_S2 = 16'h2;
-    localparam INIT_S3 = 16'h3;
+    localparam INIT_S1 = 64'h23A2B;
+    localparam INIT_S2 = 64'h2A892;
+    localparam INIT_S3 = 64'hF4511;
     
     // Control commands
     localparam CMD_NORMAL = 8'h00;  // Normal operation
@@ -36,7 +36,7 @@ module tt_um_trivium_lite (
     // ====================================
     // Internal Registers
     // ====================================
-    reg [15:0] s1, s2, s3;           // Trivium state registers
+    reg [63:0] s1, s2, s3;           // Trivium state registers
     reg [7:0] temp_keystream;       // Accumulates keystream bits
     reg [2:0] step;                 // Step counter (0-7 for 8 bits)
     reg [1:0] state;                // FSM state
@@ -74,10 +74,9 @@ module tt_um_trivium_lite (
                     // Check for valid seed input (not normal or reset command)
                     if (uio_in != CMD_NORMAL && uio_in != CMD_RESET) begin
                         // Initialize Trivium state with seed
-                        s1    <= {uio_in,uio_in};                              // Direct seed
-                        s2    <= {uio_in, ~uio_in[3:0], uio_in[7:4]};        // Bit-swapped and inverted nibbles
-                        s3    <= {uio_in, uio_in ^ 8'hA5};                     // XOR with constant
-                        state <= RUN;
+    			s1    <= {48'd0, uio_in,                   uio_in                  };
+    			s2    <= {48'd0, uio_in, ~uio_in[3:0], uio_in[7:4]             };
+    			s3    <= {48'd0, uio_in, (uio_in ^ 8'hA5)                    };                        state <= RUN;
                     end
                 end
                 
@@ -96,9 +95,9 @@ module tt_um_trivium_lite (
                         end
                         
                         // Trivium state update (shift registers with feedback)
-                        s1 <= {s1[14:0], s2[0] ^ s3[1]};  // s1 shifts left, feedback from s2[0] XOR s3[1]
-                        s2 <= {s2[14:0], s3[3] ^ s1[1]};  // s2 shifts left, feedback from s3[3] XOR s1[1]
-                        s3 <= {s3[14:0], s1[5] ^ s2[2]};  // s3 shifts left, feedback from s1[5] XOR s2[2]
+			s1 <= {s1[62:0], s2[0] ^ s3[1] ^ s1[5] ^ s2[7] ^ s3[13] ^ s1[31] ^ s2[47] ^ s3[60]};
+			s2 <= {s2[62:0], s3[3] ^ s1[1] ^ s2[2] ^ s3[19] ^ s1[23]};
+			s3 <= {s3[62:0], s1[5] ^ s2[2] ^ s3[4] ^ s1[17] ^ s2[29] ^ s3[63] ^ s1[10] ^ s2[40]};
                         
                         // Generate keystream bit and accumulate
                         temp_keystream <= {temp_keystream[6:0], s1[0] ^ s2[0] ^ s3[0]};
