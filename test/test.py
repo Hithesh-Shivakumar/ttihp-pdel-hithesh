@@ -11,11 +11,11 @@ async def test_trivium_cipher(dut):
     
     dut._log.info("Starting Trivium cipher test")
     
-    # Set the clock period to 20 ns (50 MHz) to match Verilog testbench
+    # Clock period is 20 ns (50 MHz)
     clock = Clock(dut.clk, 20, units="ns")
     cocotb.start_soon(clock.start())
     
-    # Test vectors - same as Verilog testbench
+    # Test vectors
     plaintext = [0xDE, 0xAD, 0xBE, 0xEF]
     ciphertext = [0] * 4
     decrypted = [0] * 4
