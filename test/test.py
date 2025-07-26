@@ -33,7 +33,7 @@ async def test_trivium_cipher(dut):
     
     # === SEED ===
     dut._log.info("Setting seed")
-    dut.uio_in.value = 0x77  # Custom seed
+    dut.uio_in.value = 0x76  # Custom seed
     await ClockCycles(dut.clk, 1)  # 20ns
     dut.uio_in.value = 0x00  # Clear
     await ClockCycles(dut.clk, 1)  # 20ns
@@ -55,7 +55,7 @@ async def test_trivium_cipher(dut):
     
     # === SAME SEED AGAIN ===
     dut._log.info("Setting same seed for decryption")
-    dut.uio_in.value = 0x77
+    dut.uio_in.value = 0x76
     await ClockCycles(dut.clk, 1)  # 20ns
     dut.uio_in.value = 0x00
     await ClockCycles(dut.clk, 1)  # 20ns
