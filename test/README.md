@@ -5,7 +5,7 @@
 Clone the repo in your local machine and follow the steps:
 
 1. Check the requirements.txt file and make sure the listed tools are available.
-2. Go to test folder to run tests
+2. Go to test folder to run tests.
 
 ## How to run
 
