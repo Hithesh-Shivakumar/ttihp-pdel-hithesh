@@ -9,9 +9,7 @@ from cocotb.triggers import RisingEdge, Timer, ClockCycles
 
 @cocotb.test()
 async def test_trivium_lite(dut):
-    """Basic encryption and decryption test for Trivium-lite cipher.
-    Matches behavior from working Verilog testbench.
-    """
+
     dut._log.info("Starting test")
 
     # Clock generation: 50 MHz => 20ns period
@@ -48,7 +46,7 @@ async def test_trivium_lite(dut):
     dut.uio_in.value = 0xFF
     await Timer(20, units="ns")
     dut.uio_in.value = 0x00
-    await Timer(40, units="ns")
+    await Timer(20, units="ns")
 
     # === SAME SEED AGAIN ===
     dut.uio_in.value = 0x3D
