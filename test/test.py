@@ -1,77 +1,84 @@
+# SPDX-FileCopyrightText: © 2024 Tiny Tapeout
 # SPDX-License-Identifier: Apache-2.0
-# cocotb testbench for tt_um_trivium_lite
-# Matches Verilog tb.v behavior exactly
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge, Timer, ClockCycles
-
+from cocotb.triggers import ClockCycles, RisingEdge
 
 @cocotb.test()
-async def test_trivium_lite(dut):
-
-    dut._log.info("Starting test")
-
-    # Clock generation: 50 MHz => 20ns period
-    cocotb.start_soon(Clock(dut.clk, 20, units="ns").start())
-
-    # === INPUTS ===
-    plaintext  = [0xDE, 0xAD, 0xBE, 0xEF]
+async def test_trivium_cipher(dut):
+    """Test Trivium cipher encryption and decryption"""
+    
+    dut._log.info("Starting Trivium cipher test")
+    
+    # Set the clock period to 20 ns (50 MHz) to match Verilog testbench
+    clock = Clock(dut.clk, 20, units="ns")
+    cocotb.start_soon(clock.start())
+    
+    # Test vectors - same as Verilog testbench
+    plaintext = [0xDE, 0xAD, 0xBE, 0xEF]
     ciphertext = [0] * 4
-    decrypted  = [0] * 4
-
-    # === RESET ===
-    dut.rst_n.value = 0
-    dut.ena.value   = 1
-    dut.ui_in.value = 0
-    dut.uio_in.value = 0
-    await Timer(50, units="ns")
-    dut.rst_n.value = 1
-
-    # === SEED ===
-    dut.uio_in.value = 0x3D
-    await Timer(20, units="ns")
+    decrypted = [0] * 4
+    
+    # Input Initialization
+    dut.ena.value = 1
+    dut.ui_in.value = 0x00
     dut.uio_in.value = 0x00
-    await Timer(20, units="ns")
-
+    
+    # Reset sequence
+    dut._log.info("Reset")
+    dut.rst_n.value = 0
+    await ClockCycles(dut.clk, 3)  # 50ns / 20ns = ~3 cycles
+    dut.rst_n.value = 1
+    
+    # === SEED ===
+    dut._log.info("Setting seed")
+    dut.uio_in.value = 0x77  # Custom seed
+    await ClockCycles(dut.clk, 1)  # 20ns
+    dut.uio_in.value = 0x00  # Clear
+    await ClockCycles(dut.clk, 1)  # 20ns
+    
     # === ENCRYPTION ===
     dut._log.info("=== Encryption Phase ===")
     for i in range(4):
         dut.ui_in.value = plaintext[i]
-        await ClockCycles(dut.clk, 8)
+        await ClockCycles(dut.clk, 8)  # Wait 8 clock cycles
         ciphertext[i] = int(dut.uo_out.value)
-        dut._log.info(f"Plaintext[{i}] = 0x{plaintext[i]:02X} => Ciphertext = 0x{ciphertext[i]:02X}")
-
+        dut._log.info(f"Plaintext[{i}] = 0x{plaintext[i]:02x} => Ciphertext = 0x{ciphertext[i]:02x}")
+    
     # === RESET ===
+    dut._log.info("Reset for decryption")
     dut.uio_in.value = 0xFF
-    await Timer(20, units="ns")
+    await ClockCycles(dut.clk, 1)  # 20ns
     dut.uio_in.value = 0x00
-    await Timer(20, units="ns")
-
+    await ClockCycles(dut.clk, 2)  # 40ns
+    
     # === SAME SEED AGAIN ===
-    dut.uio_in.value = 0x3D
-    await Timer(20, units="ns")
+    dut._log.info("Setting same seed for decryption")
+    dut.uio_in.value = 0x77
+    await ClockCycles(dut.clk, 1)  # 20ns
     dut.uio_in.value = 0x00
-    await Timer(20, units="ns")
-
+    await ClockCycles(dut.clk, 1)  # 20ns
+    
     # === DECRYPTION ===
     dut._log.info("=== Decryption Phase ===")
     for i in range(4):
         dut.ui_in.value = ciphertext[i]
-        await ClockCycles(dut.clk, 8)
+        await ClockCycles(dut.clk, 8)  # Wait 8 clock cycles
         decrypted[i] = int(dut.uo_out.value)
-        dut._log.info(f"Ciphertext[{i}] = 0x{ciphertext[i]:02X} => Decrypted = 0x{decrypted[i]:02X}")
-
-    # === RESULT CHECK ===
+        dut._log.info(f"Ciphertext[{i}] = 0x{ciphertext[i]:02x} => Decrypted = 0x{decrypted[i]:02x}")
+    
+    # === CHECK ===
     dut._log.info("=== Test Result ===")
+    all_passed = True
     for i in range(4):
-        pt = plaintext[i]
-        ct = ciphertext[i]
-        dt = decrypted[i]
-        if pt == dt:
-            dut._log.info(f"PASS: [{i}] 0x{pt:02X} -> 0x{ct:02X} -> 0x{dt:02X}")
+        if plaintext[i] == decrypted[i]:
+            dut._log.info(f"PASS: [{i}] 0x{plaintext[i]:02x} -> 0x{ciphertext[i]:02x} -> 0x{decrypted[i]:02x}")
         else:
-            dut._log.error(f"FAIL: [{i}] 0x{pt:02X} -> 0x{ct:02X} -> 0x{dt:02X}")
-            assert pt == dt, f"Mismatch at [{i}]"
-
-    dut._log.info("Test complete")
+            dut._log.error(f"FAIL: [{i}] 0x{plaintext[i]:02x} -> 0x{ciphertext[i]:02x} -> 0x{decrypted[i]:02x}")
+            all_passed = False
+    
+    # Final assertion
+    assert all_passed, "Encryption/Decryption test failed - decrypted data doesn't match original plaintext"
+    
+    dut._log.info("Trivium cipher test completed successfully")
